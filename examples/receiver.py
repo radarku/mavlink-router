@@ -35,13 +35,13 @@ mav = mavutil.mavlink_connection(
 
 while (True):
     msg = mav.recv_match(blocking=True)
-    print("Message from %d: %s" % (msg.get_srcSystem(), msg))
-    if msg.target_system == 0:
-        print("\tMessage sent to all")
-    elif msg.target_system == srcSystem:
-        print("\tMessage sent to me")
-    else:
-        print("\tMessage sent to other")
-    mav.mav.ping_send(
-        int(time.time() * 1000), msg.seq,
-        msg.get_srcSystem(), msg.get_srcComponent())
+    print("Message : %s" % (msg))
+    # if msg.target_system == 0:
+    #     print("\tMessage sent to all")
+    # elif msg.target_system == srcSystem:
+    #     print("\tMessage sent to me")
+    # else:
+    #     print("\tMessage sent to other")
+    # mav.mav.ping_send(
+    #     int(time.time() * 1000), msg.seq,
+    #     msg.get_srcSystem(), msg.get_srcComponent())
