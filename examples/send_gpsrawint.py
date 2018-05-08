@@ -40,7 +40,7 @@ mav = mavutil.mavlink_connection(
 
 
 def sendloop():
-    radius = 0.002 # radius[m] of circular trajectory
+    radius = 0.002 # radius[deg] of circular trajectory
     omega = 1.0 # rotational velocity [rad/s]
 
     i = 0 # sequence
@@ -56,7 +56,7 @@ def sendloop():
 
     while (True):
 
-        mav_v = radius * omega * 100
+        mav_v = (radius * omega) * 111111 * 1E2
         mav_cog = (theta + 0.5 * pi) * 1E2
         mav_lat = (radius * math.cos(theta) + trajcenter_lat) * 1E7
         mav_lon = (radius * math.sin(theta) + trajcenter_lon) * 1E7
