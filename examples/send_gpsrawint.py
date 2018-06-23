@@ -41,7 +41,7 @@ mav = mavutil.mavlink_connection(
 
 def sendloop():
     radius = 0.002 # radius[deg] of circular trajectory
-    omega = 1.0 # rotational velocity [rad/s]
+    omega = 0.1 # rotational velocity [rad/s]
 
     i = 0 # sequence
     theta = 0
@@ -68,6 +68,9 @@ def sendloop():
 
         i = i + 1
         theta = omega * i * 0.01
+
+        if i > 1000:
+          i = 0
 
         sleep(1)
 
