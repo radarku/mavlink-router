@@ -178,6 +178,7 @@ int ULog::write_msg(const struct buffer *buffer)
     /* Handle messages */
     switch (msg_id) {
     case MAVLINK_MSG_ID_COMMAND_ACK: {
+        printf("got an ack mesg\n");
         mavlink_command_ack_t cmd;
 
         memcpy(&cmd, payload, payload_len);
@@ -358,8 +359,8 @@ bool ULog::_logging_flush()
         if (r == 0 || (r == -1 && errno == EAGAIN))
             return true;
         if (r < 0) {
-            log_error("Unable to write to ULog file: (%m)");
-            printf("1fd is %d \n", _file);
+            //log_error("Unable to write to ULog file: (%m)");
+            //printf("1fd is %d \n", _file);
             return false;
         }
 
@@ -384,8 +385,8 @@ bool ULog::_logging_flush()
         if (r == 0 || (r == -1 && errno == EAGAIN))
             break;
         if (r < 0) {
-            log_error("Unable to write to ULog file: (%m)");
-            printf("2fd is %d \n", _file);
+            //log_error("Unable to write to ULog file: (%m)");
+            //printf("2fd is %d \n", _file);
             return false;
         }
 
