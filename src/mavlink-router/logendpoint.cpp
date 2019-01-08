@@ -254,7 +254,7 @@ void LogEndpoint::_handle_auto_start_stop(uint32_t msg_id, uint8_t source_system
             const mavlink_heartbeat_t *heartbeat = (mavlink_heartbeat_t *)payload;
             const bool is_armed = heartbeat->system_status == MAV_STATE_ACTIVE;
 
-            if (_file == -1 && is_armed) {
+            if (_file == -1 && is_armed && !_logging_stop_timeout) {
                 if (!start()) _mode = LogMode::disabled;
             } else if (_file != -1 && !is_armed) {
                 stop();
