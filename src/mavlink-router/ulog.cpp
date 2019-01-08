@@ -57,6 +57,7 @@ bool ULog::_start_timeout()
 
 bool ULog::_stop_timeout()
 {
+    printf("sending stop timeout\n");
     mavlink_message_t msg;
     mavlink_command_long_t cmd;
 
@@ -92,10 +93,10 @@ void ULog::stop()
     // mavlink_message_t msg;
     // mavlink_command_long_t cmd;
 
-    // if (_file == -1) {
-    //     log_info("ULog not started");
-    //     return;
-    // }
+    if (_file == -1) {
+        log_info("ULog not started");
+        return;
+    }
 
     // bzero(&cmd, sizeof(cmd));
     // cmd.command = MAV_CMD_LOGGING_STOP;
@@ -107,7 +108,7 @@ void ULog::stop()
 
     _buffer_len = 0;
     /* Write the last partial message to avoid corrupt the end of the file */
-    while (_buffer_partial_len) {
+    while (_buffer_partial_len && _file != -1) {
         if (!_logging_flush())
             break;
     }
@@ -358,6 +359,7 @@ bool ULog::_logging_flush()
             return true;
         if (r < 0) {
             log_error("Unable to write to ULog file: (%m)");
+            printf("1fd is %d \n", _file);
             return false;
         }
 
@@ -383,6 +385,7 @@ bool ULog::_logging_flush()
             break;
         if (r < 0) {
             log_error("Unable to write to ULog file: (%m)");
+            printf("2fd is %d \n", _file);
             return false;
         }
 
