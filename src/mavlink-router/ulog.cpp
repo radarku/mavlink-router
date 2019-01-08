@@ -93,10 +93,10 @@ void ULog::stop()
     // mavlink_message_t msg;
     // mavlink_command_long_t cmd;
 
-    if (_file == -1) {
-        log_info("ULog not started");
-        return;
-    }
+    // if (_file == -1) {
+    //     log_info("ULog not started");
+    //     return;
+    // }
 
     // bzero(&cmd, sizeof(cmd));
     // cmd.command = MAV_CMD_LOGGING_STOP;
