@@ -1,0 +1,11 @@
+[General]
+TCPServerPort = 0
+ReportStats = 0
+DebugLogLevel= info
+MavlinkDialect = common
+Log = /tmp
+LogMode = while-armed
+
+[UartEndpoint FlightController]
+Device=/dev/ttyACM0
+Baud = 921600
