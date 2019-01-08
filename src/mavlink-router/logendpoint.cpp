@@ -155,10 +155,29 @@ void LogEndpoint::stop()
     if (snprintf(log_file, sizeof(log_file), "%s/%s", _logs_dir, _filename) < (int)sizeof(log_file)) {
         chmod(log_file, S_IRUSR|S_IRGRP|S_IROTH);
     }
+
+    if (_logging_stop_timeout) {
+        printf("already have stop timeout\n");
+        return;
+    }
+
+    printf("adding timeout\n");
+    _logging_stop_timeout = Mainloop::get_instance().add_timeout(
+        MSEC_PER_SEC, std::bind(&LogEndpoint::_stop_timeout, this), this);
+    if (!_logging_stop_timeout) {
+        log_error("Unable to add timeout for stopping log streaming");
+    }
+
+    _stop_timeout();
 }
 
 bool LogEndpoint::start()
 {
+    if (_logging_stop_timeout) {
+        printf("was requested to stop, don't start now\n");
+        return false;
+    }
+
     if (_file != -1) {
         log_warning("Log already started");
         return false;
@@ -203,6 +222,12 @@ void LogEndpoint::_remove_start_timeout()
 {
     Mainloop::get_instance().del_timeout(_logging_start_timeout);
     _logging_start_timeout = nullptr;
+}
+
+void LogEndpoint::_remove_stop_timeout()
+{
+    Mainloop::get_instance().del_timeout(_logging_stop_timeout);
+    _logging_stop_timeout = nullptr;
 }
 
 bool LogEndpoint::_start_alive_timeout()
