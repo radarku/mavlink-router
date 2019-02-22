@@ -120,7 +120,7 @@ int mkdir_p(const char *path, int len, mode_t mode)
 {
     char *start, *end;
 
-    start = strndupa(path, len);
+    start = strndup(path, len);
     end = start + len;
 
     /*

@@ -515,7 +515,7 @@ int ConfFile::parse_bool(const char *val, size_t val_len, void *storage, size_t 
         if (storage_len < sizeof(_type))                                        \
             return -ENOBUFS;                                                    \
                                                                                 \
-        str = strndupa(val, val_len);                                           \
+        str = strndup(val, val_len);                                           \
         return _func(str, (_type *)storage);                                    \
     }
 

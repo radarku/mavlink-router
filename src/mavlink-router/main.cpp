@@ -571,7 +571,7 @@ static int parse_log_level(const char *val, size_t val_len, void *storage, size_
     if (val_len > MAX_LOG_LEVEL_SIZE)
         return -EINVAL;
 
-    const char *log_level = strndupa(val, val_len);
+    const char *log_level = strndup(val, val_len);
     int lvl = log_level_from_str(log_level);
     if (lvl == -EINVAL) {
         log_error("Invalid argument for DebugLogLevel = %s", log_level);
@@ -595,7 +595,7 @@ static int parse_log_mode(const char *val, size_t val_len, void *storage, size_t
     if (val_len > MAX_LOG_MODE_SIZE)
         return -EINVAL;
 
-    const char *log_mode_str = strndupa(val, val_len);
+    const char *log_mode_str = strndup(val, val_len);
     LogMode log_mode;
     if (strcaseeq(log_mode_str, "always"))
         log_mode = LogMode::always;
