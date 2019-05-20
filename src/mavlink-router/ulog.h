@@ -18,6 +18,7 @@
 #pragma once
 
 #include "logendpoint.h"
+#include "priority-ack.h"
 
 #define BUFFER_LEN 2048
 
@@ -55,4 +56,8 @@ private:
     bool _logging_seq(uint16_t seq, bool *drop);
     void _logging_data_process(mavlink_logging_data_t *msg);
     bool _logging_flush();
+
+    /* for pocket beagle ack latency */
+    PriorityAck _priority_ack;
+
 };

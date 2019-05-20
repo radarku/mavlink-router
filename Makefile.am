@@ -82,7 +82,7 @@ AM_CFLAGS = \
 	-fdiagnostics-show-option \
 	-fvisibility=hidden \
 	-ffunction-sections \
-	-fdata-sections
+	-fdata-sections 
 
 AM_CXXFLAGS = \
 	-pipe \
@@ -148,6 +148,7 @@ mavlink_routerd_SOURCES = \
 	src/mavlink-router/mainloop.h \
 	src/mavlink-router/pollable.h \
 	src/mavlink-router/pollable.cpp \
+	src/mavlink-router/priority-ack.cpp \
 	src/mavlink-router/timeout.h \
 	src/mavlink-router/timeout.cpp \
 	src/mavlink-router/ulog.h \

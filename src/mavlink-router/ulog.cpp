@@ -146,6 +146,10 @@ int ULog::write_msg(const struct buffer *buffer)
         return buffer->len;
     }
 
+    // set priority for low latency ack connections
+
+    _priority_ack._set_priority(msg_id);
+
     const mavlink_msg_entry_t *msg_entry = mavlink_get_msg_entry(msg_id);
     if (!msg_entry) {
         return buffer->len;
@@ -338,6 +342,13 @@ void ULog::_logging_data_process(mavlink_logging_data_t *msg)
 
 bool ULog::_logging_flush()
 {
+
+    /* dont bother flushing if the fd is bad */
+
+    if(_file < 0) {
+        return false;
+    }
+
     while (_buffer_partial_len) {
         const ssize_t r = write(_file, _buffer_partial, _buffer_partial_len);
         if (r == 0 || (r == -1 && errno == EAGAIN))
