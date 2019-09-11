@@ -225,6 +225,7 @@ int Endpoint::read_msg(struct buffer *pbuf, int *target_sysid, int *target_compi
          * corrupted message is better forward than silent drop it.
          */
         if (!_check_crc(msg_entry)) {
+            printf("crc failure (exp=%i, msg_id=%i)\n", expected_size, msg_entry->msgid);
             _stat.read.crc_error++;
             _stat.read.crc_error_bytes += expected_size;
             return 0;
@@ -711,7 +712,7 @@ int UartEndpoint::add_speeds(std::vector<unsigned long> bauds)
 }
 
 UdpEndpoint::UdpEndpoint()
-    : Endpoint{"UDP", false}
+    : Endpoint{"UDP", true}
 {
     bzero(&sockaddr, sizeof(sockaddr));
 }
