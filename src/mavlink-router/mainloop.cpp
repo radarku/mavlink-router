@@ -24,6 +24,7 @@
 #include <sys/stat.h>
 #include <sys/timerfd.h>
 #include <unistd.h>
+#include <iostream>
 
 #include <memory>
 #include <vector>
@@ -757,7 +758,7 @@ void Mainloop::_handle_pipe()
     ssize_t num_read = read(_pipefd, cmd, sizeof(cmd) - 1);
     if (num_read > 0) {
         cmd[num_read] = 0;
-        log_debug("Pipe read %ld bytes: %s", num_read, cmd);
+        std::cout << "Pipe read " << std::to_string(num_read) <<  " bytes: " << cmd << std::endl;
         // Op UDP Name IP Port Eavesdropping
         std::vector<std::string> a;
         std::string command = cmd;
