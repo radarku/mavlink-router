@@ -90,7 +90,7 @@ int ConfFile::parse(const char *filename)
 
     _files = new conffile{addr, (size_t)fstat.st_size, strdup(filename), _files};
 
-    ret = _parse_file((char *)addr, (size_t)fstat.st_size, _files->filename);
+    ret = parse_buffer((char *)addr, (size_t)fstat.st_size, _files->filename);
     if (ret < 0) {
         log_error("Conf file parcially parsed. Configuration keys defined before the error were "
                   "included");
@@ -103,7 +103,7 @@ error:
     return ret;
 }
 
-int ConfFile::_parse_file(const char *addr, size_t len, const char *filename)
+int ConfFile::parse_buffer(const char *addr, size_t len, const char *filename)
 {
     int line = 0, ret = 0;
     char *end;

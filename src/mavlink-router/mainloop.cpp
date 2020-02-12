@@ -24,6 +24,7 @@
 #include <unistd.h>
 
 #include <memory>
+#include <sstream>
 
 #include <common/log.h>
 #include <common/util.h>
@@ -339,36 +340,22 @@ static bool _print_statistics_timeout_cb(void *data)
 
 bool Mainloop::add_endpoints(Mainloop &mainloop, struct options *opt)
 {
-    unsigned n_endpoints = 0;
-    struct endpoint_config *conf;
-
-    for (conf = opt->endpoints; conf; conf = conf->next) {
-        if (conf->type != Tcp) {
-            // TCP endpoints are efemeral, that's why they don't
-            // live on `g_endpoints` array, but on `g_tcp_endpoints` list
-            n_endpoints++;
-        }
-    }
-
-    if (opt->logs_dir)
-        n_endpoints++;
-
-    for (conf = opt->endpoints; conf; conf = conf->next) {
-        switch (conf->type) {
+    for (const auto& conf : opt->endpoints) {
+        switch (conf.type) {
         case Uart: {
             std::unique_ptr<UartEndpoint> uart{new UartEndpoint{}};
-            if (uart->open(conf->device) < 0)
+            if (uart->open(conf.device.c_str()) < 0)
                 return false;
 
-            if (conf->bauds->size() == 1) {
-                if (uart->set_speed((*(conf->bauds))[0]) < 0)
+            if (conf.bauds.size() == 1) {
+                if (uart->set_speed((conf.bauds)[0]) < 0)
                     return false;
             } else {
-                if (uart->add_speeds(*conf->bauds) < 0)
+                if (uart->add_speeds(conf.bauds) < 0)
                     return false;
             }
 
-            if (conf->flowcontrol) {
+            if (conf.flowcontrol) {
                 if (uart->set_flow_control(true) < 0)
                     return false;
             }
@@ -379,17 +366,15 @@ bool Mainloop::add_endpoints(Mainloop &mainloop, struct options *opt)
         }
         case Udp: {
             std::unique_ptr<UdpEndpoint> udp{new UdpEndpoint{}};
-            if (udp->open(conf->address, conf->port, conf->eavesdropping) < 0) {
-                log_error("Could not open %s:%ld", conf->address, conf->port);
+            if (udp->open(conf.address.c_str(), conf.port, conf.eavesdropping) < 0) {
+                log_error("Could not open %s:%ld", conf.address.c_str(), conf.port);
                 return false;
             }
 
-            if (conf->filter) {
-                char *token = strtok(conf->filter, ",");
-                while (token != NULL) {
-                    udp->add_message_to_filter(atoi(token));
-                    token = strtok(NULL, ",");
-                } 
+            std::stringstream ss(conf.filter);
+            std::string token;
+            while (std::getline(ss, token, ',')) {
+                udp->add_message_to_filter(atoi(token.c_str()));
             }
 
             mainloop.add_fd(udp->fd, udp.get(), EPOLLIN);
@@ -398,9 +383,9 @@ bool Mainloop::add_endpoints(Mainloop &mainloop, struct options *opt)
         }
         case Tcp: {
             std::unique_ptr<TcpEndpoint> tcp{new TcpEndpoint{}};
-            tcp->retry_timeout = conf->retry_timeout;
-            if (tcp->open(conf->address, conf->port) < 0) {
-                log_error("Could not open %s:%ld.", conf->address, conf->port);
+            tcp->retry_timeout = conf.retry_timeout;
+            if (tcp->open(conf.address.c_str(), conf.port) < 0) {
+                log_error("Could not open %s:%ld.", conf.address.c_str(), conf.port);
                 if (tcp->retry_timeout > 0) {
                     _add_tcp_retry(tcp.release());
                 }
@@ -408,7 +393,7 @@ bool Mainloop::add_endpoints(Mainloop &mainloop, struct options *opt)
             }
 
             if (_add_tcp_endpoint(tcp.get()) < 0) {
-                log_error("Could not open %s:%ld", conf->address, conf->port);
+                log_error("Could not open %s:%ld", conf.address.c_str(), conf.port);
                 return false;
             }
             tcp.release();
@@ -425,16 +410,16 @@ bool Mainloop::add_endpoints(Mainloop &mainloop, struct options *opt)
     }
 
 
-    if (opt->logs_dir) {
+    if (!opt->logs_dir.empty()) {
         std::unique_ptr<LogEndpoint> log_endpoint;
         if (opt->mavlink_dialect == Ardupilotmega) {
             log_endpoint.reset(
-                new BinLog(opt->logs_dir, opt->log_mode, opt->min_free_space, opt->max_log_files));
+                new BinLog(opt->logs_dir.c_str(), opt->log_mode, opt->min_free_space, opt->max_log_files));
         } else if (opt->mavlink_dialect == Common) {
             log_endpoint.reset(
-                new ULog(opt->logs_dir, opt->log_mode, opt->min_free_space, opt->max_log_files));
+                new ULog(opt->logs_dir.c_str(), opt->log_mode, opt->min_free_space, opt->max_log_files));
         } else {
-            log_endpoint.reset(new AutoLog(opt->logs_dir, opt->log_mode, opt->min_free_space,
+            log_endpoint.reset(new AutoLog(opt->logs_dir.c_str(), opt->log_mode, opt->min_free_space,
                                         opt->max_log_files));
         }
         _log_endpoint = log_endpoint.get();

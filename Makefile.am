@@ -150,6 +150,8 @@ mavlink_routerd_SOURCES = \
 	src/mavlink-router/main.cpp \
 	src/mavlink-router/mainloop.cpp \
 	src/mavlink-router/mainloop.h \
+	src/mavlink-router/options.cpp \
+	src/mavlink-router/options.h \
 	src/mavlink-router/pollable.h \
 	src/mavlink-router/pollable.cpp \
 	src/mavlink-router/timeout.h \
@@ -197,8 +199,8 @@ PY_LOG_COMPILER = $(PYTHON)
 # ------------------------------------------------------------------------------
 
 if HAVE_GTEST
-check_PROGRAMS += mainloop_test
-TESTS += mainloop_test
+check_PROGRAMS += mainloop_test options_test
+TESTS += mainloop_test options_test
 endif
 
 mainloop_test_SOURCES = \
@@ -220,6 +222,8 @@ mainloop_test_SOURCES = \
 	src/mavlink-router/logendpoint.h \
 	src/mavlink-router/mainloop_test.cpp \
 	src/mavlink-router/mainloop.cpp \
+	src/mavlink-router/options.cpp \
+	src/mavlink-router/options.h \
 	src/mavlink-router/pollable.cpp \
 	src/mavlink-router/pollable.h \
 	src/mavlink-router/timeout.cpp \
@@ -227,6 +231,24 @@ mainloop_test_SOURCES = \
 	src/mavlink-router/ulog.h \
 	src/mavlink-router/ulog.cpp
 mainloop_test_LDADD = $(GTEST_LIBS)
+
+options_test_SOURCES = \
+	src/common/conf_file.h \
+	src/common/conf_file.cpp \
+	src/common/log.cpp \
+	src/common/log.h \
+	src/common/util.c \
+	src/common/util.h \
+	src/common/xtermios.cpp \
+	src/common/xtermios.h \
+	src/mavlink-router/autolog.cpp \
+	src/mavlink-router/autolog.h \
+	src/mavlink-router/binlog.cpp \
+	src/mavlink-router/binlog.h \
+	src/mavlink-router/options_test.cpp \
+	src/mavlink-router/options.cpp \
+	src/mavlink-router/options.h
+options_test_LDADD = $(GTEST_LIBS)
 
 # ------------------------------------------------------------------------------
 # coverity

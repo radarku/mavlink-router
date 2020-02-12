@@ -24,15 +24,8 @@ public:
         // XXX: not clear about the name of this variable -- it causes socket
         // to be bound to specified port
         cfg.eavesdropping = true;
-        cfg.filter = nullptr;
+        cfg.filter = "";
         return cfg;
-    }
-
-    static struct options make_single_endpoint_options(endpoint_config* cfg)
-    {
-        struct options opts{};
-        opts.endpoints = cfg;
-        return opts;
     }
 
     static std::pair<int, sockaddr_in> make_scratch_udp_socket()
@@ -62,8 +55,8 @@ TEST_F(MainLoopTest, termination)
 
 TEST_F(MainLoopTest, create_udp_endpoint)
 {
-    struct endpoint_config cfg = make_udp_endpoint_config(7777);
-    struct options opts = make_single_endpoint_options(&cfg);
+    struct options opts{};
+    opts.endpoints.push_back(make_udp_endpoint_config(7777));
 
     Mainloop mainloop;
     mainloop.add_endpoints(mainloop, &opts);
@@ -72,8 +65,8 @@ TEST_F(MainLoopTest, create_udp_endpoint)
 
 TEST_F(MainLoopTest, direct_udp_endpoint_send)
 {
-    struct endpoint_config cfg = make_udp_endpoint_config(7777);
-    struct options opts = make_single_endpoint_options(&cfg);
+    struct options opts{};
+    opts.endpoints.push_back(make_udp_endpoint_config(7777));
 
     Mainloop mainloop;
 

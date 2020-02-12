@@ -71,6 +71,19 @@ public:
     int parse(const char *filename);
 
     /**
+     * Load and parse contents of configuration file.
+     *
+     * Parse the given data buffer as contents of configuration file, also
+     * see \ref parse member function.
+     *
+     * @param addr Base address of buffer
+     * @param len Size of buffer
+     * @param filename The conf filename
+     * @return errno on IO or parsing errors or @c 0 if successful
+     */
+    int parse_buffer(const char *addr, size_t len, const char *filename);
+
+    /**
      * Release all opened files and internal structures from this ConfFile.
      */
     void release_all();
@@ -135,7 +148,6 @@ private:
     struct conffile *_files;
     struct section *_sections;
 
-    int _parse_file(const char *addr, size_t len, const char *filename);
     struct section *_find_section(const char *section_name, size_t len);
     struct config *_find_config(struct section *s, const char *key_name, size_t key_len);
 

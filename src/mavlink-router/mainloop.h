@@ -21,11 +21,13 @@
 
 #include <atomic>
 
+#include <common/log.h>
 #include "binlog.h"
 #include "comm.h"
 #include "endpoint.h"
 #include "timeout.h"
 #include "ulog.h"
+#include "options.h"
 
 struct endpoint_entry {
     struct endpoint_entry *next;
@@ -136,41 +138,4 @@ private:
     struct sigaction _old_sigterm;
     struct sigaction _old_sigint;
     struct sigaction _old_sigpipe;
-};
-
-enum endpoint_type { Tcp, Uart, Udp, Unknown };
-enum mavlink_dialect { Auto, Common, Ardupilotmega };
-
-struct endpoint_config {
-    struct endpoint_config *next;
-    char *name;
-    enum endpoint_type type;
-    union {
-        struct {
-            char *address;
-            long unsigned port;
-            int retry_timeout;
-            bool eavesdropping;
-        };
-        struct {
-            char *device;
-            std::vector<unsigned long> *bauds;
-            bool flowcontrol;
-        };
-    };
-    char *filter;
-};
-
-struct options {
-    struct endpoint_config *endpoints;
-    const char *conf_file_name;
-    const char *conf_dir;
-    unsigned long tcp_port;
-    bool report_msg_statistics;
-    char *logs_dir;
-    LogMode log_mode;
-    int debug_log_level;
-    enum mavlink_dialect mavlink_dialect;
-    unsigned long min_free_space;
-    unsigned long max_log_files;
 };
