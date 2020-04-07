@@ -142,7 +142,7 @@ int ULog::write_msg(const struct buffer *buffer)
 
     /* Check if we are interested in this msg_id */
     if (msg_id != MAVLINK_MSG_ID_COMMAND_ACK && msg_id != MAVLINK_MSG_ID_LOGGING_DATA_ACKED
-        && msg_id != MAVLINK_MSG_ID_LOGGING_DATA) {
+        && msg_id != MAVLINK_MSG_ID_LOGGING_DATA && msg_id != MAVLINK_MSG_ID_TIMESYNC) {
         return buffer->len;
     }
 
@@ -160,6 +160,8 @@ int ULog::write_msg(const struct buffer *buffer)
     } else {
         trimmed_zeros = 0;
     }
+
+    bool early_return = false;
 
     /* Handle messages */
     switch (msg_id) {
@@ -215,10 +217,38 @@ int ULog::write_msg(const struct buffer *buffer)
         }
         break;
     }
+    case MAVLINK_MSG_ID_TIMESYNC: {
+        mavlink_timesync_t timesync;
+
+        memcpy(&timesync, payload, payload_len);
+
+        // printf("ts %ld | ", timesync.ts1);
+
+        if(timesync.tc1 != 0) break;
+
+        timespec t;
+        clock_gettime(CLOCK_MONOTONIC, &t);
+        timesync.tc1 = (uint64_t)t.tv_sec * 1000000000ll + t.tv_nsec;
+
+        // timesync.tc1 = 10000;
+
+        mavlink_message_t msg;
+
+        mavlink_msg_timesync_encode(1, MAV_COMP_ID_PERIPHERAL, &msg, &timesync);
+
+        _send_msg(&msg, 1);
+
+        early_return = true;
+
+        break;
+    }
     }
 
-    _stat.write.total++;
-    _stat.write.bytes += buffer->len;
+    if(!early_return){
+        _stat.write.total++;
+        _stat.write.bytes += buffer->len;
+    }
+    
 
     return buffer->len;
 }
