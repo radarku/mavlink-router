@@ -224,7 +224,10 @@ int ULog::write_msg(const struct buffer *buffer)
 
         // printf("ts %ld | ", timesync.ts1);
 
-        if(timesync.tc1 != 0) break;
+        if(timesync.tc1 != 0){
+            early_return = true;
+            break;
+        }
 
         timespec t;
         clock_gettime(CLOCK_MONOTONIC, &t);
