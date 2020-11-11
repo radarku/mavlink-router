@@ -139,7 +139,7 @@ int Mainloop::write_msg(Endpoint *e, const struct buffer *buf)
 }
 
 void Mainloop::route_msg(struct buffer *buf, int target_sysid, int target_compid, int sender_sysid,
-                         int sender_compid, uint32_t msg_id)
+                         int sender_compid, uint32_t msg_id, bool log)
 {
     bool unknown = true;
 
@@ -147,19 +147,29 @@ void Mainloop::route_msg(struct buffer *buf, int target_sysid, int target_compid
         if (e->accept_msg(target_sysid, target_compid, sender_sysid, sender_compid, msg_id)) {
             log_debug("Endpoint [%d] accepted message to %d/%d from %u/%u", e->fd, target_sysid,
                       target_compid, sender_sysid, sender_compid);
+            // if (log) printf("Endpoint [%d] accepted message to %d/%d from %u/%u\n", e->fd, target_sysid,
+            //           target_compid, sender_sysid, sender_compid);
             write_msg(e.get(), buf);
             e->postprocess_msg(target_sysid, target_compid, sender_sysid, sender_compid, msg_id);
             unknown = false;
+        } else {
+            // if (log) printf("Did not accept Endpoint [%d] accepted message to %d/%d from %u/%u\n", e->fd, target_sysid,
+            //           target_compid, sender_sysid, sender_compid);
         }
     }
 
     for (auto i: _dynamic_endpoints) {
-        if (i.second->accept_msg(target_sysid, target_compid, sender_sysid, sender_compid, msg_id)) {
+        if (i.second->accept_msg(target_sysid, target_compid, sender_sysid, sender_compid, msg_id, log)) {
             log_debug("Endpoint [%d] accepted message to %d/%d from %u/%u", i.second->fd, target_sysid,
+                      target_compid, sender_sysid, sender_compid);
+            if (log) printf("Dynamic Endpoint [%d] accepted message to %d/%d from %u/%u\n", i.second->fd, target_sysid,
                       target_compid, sender_sysid, sender_compid);
             write_msg(i.second, buf);
             unknown = false;
             i.second->postprocess_msg(target_sysid, target_compid, sender_sysid, sender_compid, msg_id);
+        } else {
+            if (log) printf("Did not accept Dynamic Endpoint [%d] accepted message to %d/%d from %u/%u\n", i.second->fd, target_sysid,
+                      target_compid, sender_sysid, sender_compid);
         }
     }
 
@@ -167,12 +177,17 @@ void Mainloop::route_msg(struct buffer *buf, int target_sysid, int target_compid
         if (e->endpoint->accept_msg(target_sysid, target_compid, sender_sysid, sender_compid, msg_id)) {
             log_debug("Endpoint [%d] accepted message to %d/%d from %u/%u", e->endpoint->fd,
                       target_sysid, target_compid, sender_sysid, sender_compid);
+            // if (log) printf("Post Endpoint [%d] accepted message to %d/%d from %u/%u\n", e->endpoint->fd,
+            //           target_sysid, target_compid, sender_sysid, sender_compid);
             int r = write_msg(e->endpoint, buf);
             if (r == -EPIPE) {
                 should_process_tcp_hangups = true;
             }
             unknown = false;
             e->endpoint->postprocess_msg(target_sysid, target_compid, sender_sysid, sender_compid, msg_id);
+        } else {
+            // if (log) printf("Did not accept Post Endpoint [%d] accepted message to %d/%d from %u/%u\n", e->endpoint->fd,
+            //           target_sysid, target_compid, sender_sysid, sender_compid);
         }
     }
 

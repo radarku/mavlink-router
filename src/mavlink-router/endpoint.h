@@ -97,7 +97,7 @@ public:
         return has_sys_comp_id(sys_comp_id);
     }
 
-    bool accept_msg(int target_sysid, int target_compid, uint8_t src_sysid, uint8_t src_compid, uint32_t msg_id);
+    bool accept_msg(int target_sysid, int target_compid, uint8_t src_sysid, uint8_t src_compid, uint32_t msg_id, bool log = false);
     void postprocess_msg(int target_sysid, int target_compid, uint8_t src_sysid, uint8_t src_compid, uint32_t msg_id);
 
     bool allowed_by_filter(uint32_t msg_id);

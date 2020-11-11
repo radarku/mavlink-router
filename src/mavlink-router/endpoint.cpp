@@ -75,12 +75,28 @@ int Endpoint::handle_read()
     uint8_t src_sysid, src_compid;
     uint32_t msg_id;
     struct buffer buf{};
-
     while ((r = read_msg(&buf, &target_sysid, &target_compid, &src_sysid,
                          &src_compid, &msg_id)) > 0) {
-        if (allowed_by_filter(msg_id))
+        mavlink_message_t msg;
+        mavlink_status_t status;
+        bool log = false;
+        for (int i = 0; i < buf.len; i++) {
+            if(mavlink_parse_char(MAVLINK_COMM_0, buf.data[i], &msg, &status)) {
+                if (msg_id == 76) {
+                    mavlink_command_long_t cmd;
+                    mavlink_msg_command_long_decode(&msg, &cmd);
+                    if (cmd.command == 2000){
+                        log = true;
+                        printf("command Received: %d\n", cmd.command);
+                    }
+                }
+                break;
+            }
+        }
+        
+        // if (allowed_by_filter(msg_id))
             Mainloop::get_instance().route_msg(&buf, target_sysid, target_compid,
-                                               src_sysid, src_compid, msg_id);
+                                               src_sysid, src_compid, msg_id, log);
     }
 
     return r;
@@ -305,18 +321,19 @@ bool Endpoint::has_sys_id(unsigned sysid)
 bool Endpoint::has_sys_comp_id(unsigned sys_comp_id)
 {
     for (auto it = _sys_comp_ids.begin(); it != _sys_comp_ids.end(); it++) {
-        if (sys_comp_id == *it)
+        if (sys_comp_id == *it) {
             return true;
+        }
     }
 
     return false;
 }
 
 bool Endpoint::accept_msg(int target_sysid, int target_compid, uint8_t src_sysid,
-                          uint8_t src_compid, uint32_t msg_id)
+                          uint8_t src_compid, uint32_t msg_id, bool log)
 {
     if (Log::get_max_level() >= Log::Level::DEBUG) {
-        log_debug("Endpoint [%d] got message to %d/%d from %u/%u", fd, target_sysid, target_compid,
+        log_debug("[accept_msg] Endpoint [%d] got message to %d/%d from %u/%u", fd, target_sysid, target_compid,
                   src_sysid, src_compid);
         log_debug("\tKnown endpoints:");
         for (auto it = _sys_comp_ids.begin(); it != _sys_comp_ids.end(); it++) {
@@ -324,13 +341,36 @@ bool Endpoint::accept_msg(int target_sysid, int target_compid, uint8_t src_sysid
         }
     }
 
+    if (log) {
+        printf("[accept_msg] Endpoint [%d] got message to %d/%d from %u/%u\n", fd, target_sysid, target_compid,
+                  src_sysid, src_compid);
+    }
+
     // This endpoint sent the message, we don't want to send it back over the
     // same channel to avoid loops: reject
-    if (has_sys_comp_id(src_sysid, src_compid))
+    if (has_sys_comp_id(src_sysid, src_compid)) {
+        if (log) {
+            printf("[accept_msg] Failed has_sys_comp_id\n");
+            printf("  [has_sys_comp_id] src sysid: %d\n", src_sysid);
+            uint16_t sys_comp_id = ((src_sysid & 0xff) << 8) | (src_compid & 0xff);
+            printf("  [has_sys_comp_id] sys_comp_id: %d\n", sys_comp_id);
+            printf("  [has_sys_comp_id] parsed %u/%u\n", (sys_comp_id >> 8), sys_comp_id & 0xff);
+            for (auto it = _sys_comp_ids.begin(); it != _sys_comp_ids.end(); it++) {
+                if (sys_comp_id == *it) {
+                    printf(" Is equal %u / %u\n", sys_comp_id, *it);
+                } else {
+                    printf(" NOT equal %u / %u\n", sys_comp_id, *it);
+                }
+                printf("  [has_sys_comp_id] list: %u/%u\n", (*it >> 8), *it & 0xff);
+            }
+        }
         return false;
+    }
 
-    if (!allowed_by_filter(msg_id))
+    if (!allowed_by_filter(msg_id)) {
+        if (log) printf("[accept_msg] Failed allowed by filter\n");
         return false;
+    }
 
     // Message is broadcast on sysid: accept msg
     if (target_sysid == 0 || target_sysid == -1)
@@ -343,6 +383,8 @@ bool Endpoint::accept_msg(int target_sysid, int target_compid, uint8_t src_sysid
     // This endpoint has the target of message (sysid, but compid is broadcast): accept
     if (has_sys_id(target_sysid))
         return true;
+
+    if (log) printf("[accept_msg] Nothing Passed\n");
 
     // Reject everything else
     return false;
