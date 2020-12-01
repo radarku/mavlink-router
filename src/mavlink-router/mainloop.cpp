@@ -503,6 +503,11 @@ bool Mainloop::add_endpoints(Mainloop &mainloop, struct options *opt)
                     return false;
             }
 
+            if (conf->dropout_percentage) {
+                log_warning("Dropout set to %u%% on uart %s", conf->dropout_percentage, conf->device);
+                uart->set_dropout_percentage(conf->dropout_percentage);
+            }
+
             mainloop.add_fd(uart->fd, uart.get(), EPOLLIN);
             _endpoints.push_back(std::move(uart));
             break;
@@ -534,6 +539,11 @@ bool Mainloop::add_endpoints(Mainloop &mainloop, struct options *opt)
                     token = strtok(nullptr, ",");
                 }
                 free(local_nodelay);
+            }
+
+            if (conf->dropout_percentage) {
+                log_warning("Dropout set to %u%% on udp %s:%lu", conf->dropout_percentage, conf->address, conf->port);
+                udp->set_dropout_percentage(conf->dropout_percentage);
             }
 
             mainloop.add_fd(udp->fd, udp.get(), EPOLLIN);

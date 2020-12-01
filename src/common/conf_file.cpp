@@ -347,8 +347,8 @@ int ConfFile::_extract_options_from_section(struct section *s, const OptionsTabl
         storage = (void *)((char *)data + table[i].storage.offset);
         ret = table[i].parser_func(c->value, c->value_len, storage, table[i].storage.len);
         if (ret < 0) {
-            log_error("On file %s: Line %d: Invalid value '%.*s' for field '%s'", c->filename,
-                      c->line, (int)c->value_len, c->value, table[i].key);
+            log_error("On file %s: Line %d: Invalid value '%.*s' for field '%s', err %d", c->filename,
+                      c->line, (int)c->value_len, c->value, table[i].key, ret);
             return ret;
         }
     }

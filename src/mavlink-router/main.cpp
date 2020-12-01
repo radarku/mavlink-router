@@ -184,6 +184,7 @@ static int add_tcp_endpoint_address(const char *name, size_t name_len, const cha
     assert_or_return(conf, -ENOMEM);
     conf->type = Tcp;
     conf->port = ULONG_MAX;
+    conf->dropout_percentage = 0;
 
     if (!conf->name && name) {
         conf->name = strndup(name, name_len);
@@ -233,7 +234,8 @@ fail:
 
 static int add_udp_endpoint_address(const char *name, size_t name_len, const char *ip,
                                     long unsigned port, bool eavesdropping, const char *filter,
-                                    int coalesce_bytes, int coalesce_ms, const char *coalesce_nodelay)
+                                    int coalesce_bytes, int coalesce_ms, const char *coalesce_nodelay,
+                                    uint32_t dropout_percentage)
 {
     int ret;
 
@@ -243,6 +245,7 @@ static int add_udp_endpoint_address(const char *name, size_t name_len, const cha
     assert_or_return(ip != nullptr, -EINVAL);
     conf->type = Udp;
     conf->port = ULONG_MAX;
+    conf->dropout_percentage = dropout_percentage;
 
     if (name) {
         conf->name = strndup(name, name_len);
@@ -343,7 +346,7 @@ error:
 }
 
 static int add_uart_endpoint(const char *name, size_t name_len, const char *uart_device,
-                             const char *bauds, bool flowcontrol)
+                             const char *bauds, bool flowcontrol, uint32_t dropout_percentage)
 {
     int ret;
 
@@ -351,6 +354,7 @@ static int add_uart_endpoint(const char *name, size_t name_len, const char *uart
         = (struct endpoint_config *)calloc(1, sizeof(struct endpoint_config));
     assert_or_return(conf, -ENOMEM);
     conf->type = Uart;
+    conf->dropout_percentage = dropout_percentage;
 
     if (name) {
         conf->name = strndup(name, name_len);
@@ -446,7 +450,7 @@ static int parse_argv(int argc, char *argv[])
                 return -EINVAL;
             }
 
-            add_udp_endpoint_address(NULL, 0, ip, port, false, NULL, 0, 0, NULL);
+            add_udp_endpoint_address(NULL, 0, ip, port, false, NULL, 0, 0, NULL, 0);
             free(ip);
             break;
         }
@@ -546,10 +550,10 @@ static int parse_argv(int argc, char *argv[])
                 return -EINVAL;
             }
 
-            add_udp_endpoint_address(NULL, 0, base, number, true, NULL, 0, 0, NULL);
+            add_udp_endpoint_address(NULL, 0, base, number, true, NULL, 0, 0, NULL, 0);
         } else {
             const char *bauds = number != ULONG_MAX ? base + strlen(base) + 1 : NULL;
-            int ret = add_uart_endpoint(NULL, 0, base, bauds, false);
+            int ret = add_uart_endpoint(NULL, 0, base, bauds, false, 0);
             if (ret < 0) {
                 free(base);
                 return ret;
@@ -721,11 +725,13 @@ static int parse_confs(ConfFile &conf)
         char *device;
         char *bauds;
         bool flowcontrol;
+        unsigned long dropout_percentage;
     };
     static const ConfFile::OptionsTable option_table_uart[] = {
         {"baud",        false,  ConfFile::parse_str_dup,    OPTIONS_TABLE_STRUCT_FIELD(option_uart, bauds)},
         {"device",      true,   ConfFile::parse_str_dup,    OPTIONS_TABLE_STRUCT_FIELD(option_uart, device)},
         {"FlowControl", false,  ConfFile::parse_bool,       OPTIONS_TABLE_STRUCT_FIELD(option_uart, flowcontrol)},
+        {"DropoutPercentage",false, ConfFile::parse_ul,     OPTIONS_TABLE_STRUCT_FIELD(option_uart, dropout_percentage)},
     };
 
     struct option_udp {
@@ -736,6 +742,7 @@ static int parse_confs(ConfFile &conf)
         unsigned long coalesce_bytes;
         unsigned long coalesce_ms;
         char *coalesce_nodelay;
+        unsigned long dropout_percentage;
     };
     static const ConfFile::OptionsTable option_table_udp[] = {
         {"address",         true,   ConfFile::parse_str_dup,    OPTIONS_TABLE_STRUCT_FIELD(option_udp, addr)},
@@ -745,6 +752,7 @@ static int parse_confs(ConfFile &conf)
         {"CoalesceBytes",   false,  ConfFile::parse_ul,         OPTIONS_TABLE_STRUCT_FIELD(option_udp, coalesce_bytes)},
         {"CoalesceMs",      false,  ConfFile::parse_ul,         OPTIONS_TABLE_STRUCT_FIELD(option_udp, coalesce_ms)},
         {"CoalesceNoDelay", false,  ConfFile::parse_str_dup,    OPTIONS_TABLE_STRUCT_FIELD(option_udp, coalesce_nodelay)},
+        {"DropoutPercentage",false, ConfFile::parse_ul,         OPTIONS_TABLE_STRUCT_FIELD(option_udp, dropout_percentage)},
     };
 
     struct option_tcp {
@@ -771,7 +779,7 @@ static int parse_confs(ConfFile &conf)
                                    &opt_uart);
         if (ret == 0)
             ret = add_uart_endpoint(iter.name + offset, iter.name_len - offset, opt_uart.device,
-                                    opt_uart.bauds, opt_uart.flowcontrol);
+                                    opt_uart.bauds, opt_uart.flowcontrol, opt_uart.dropout_percentage);
         free(opt_uart.device);
         free(opt_uart.bauds);
         if (ret < 0)
@@ -795,7 +803,7 @@ static int parse_confs(ConfFile &conf)
                 } else {
                     ret = add_udp_endpoint_address(iter.name + offset, iter.name_len - offset, opt_udp.addr,
                                                    opt_udp.port, opt_udp.eavesdropping, opt_udp.filter, opt_udp.coalesce_bytes,
-                                                   opt_udp.coalesce_ms, opt_udp.coalesce_nodelay);
+                                                   opt_udp.coalesce_ms, opt_udp.coalesce_nodelay, opt_udp.dropout_percentage);
                 }
             }
         }

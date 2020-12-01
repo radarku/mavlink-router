@@ -81,7 +81,7 @@ int Endpoint::handle_read()
 
     while ((r = read_msg(&buf, &target_sysid, &target_compid, &src_sysid,
                          &src_compid, &msg_id)) > 0) {
-        if (allowed_by_filter(msg_id))
+        if (allowed_by_filter(msg_id) && allowed_by_dropout())
             Mainloop::get_instance().route_msg(&buf, target_sysid, target_compid,
                                                src_sysid, src_compid, msg_id);
     }
@@ -335,6 +335,9 @@ bool Endpoint::accept_msg(int target_sysid, int target_compid, uint8_t src_sysid
     if (!allowed_by_filter(msg_id))
         return false;
 
+    if (!allowed_by_dropout())
+        return false;
+
     // Message is broadcast on sysid or sysid is non-existent: accept msg
     if (target_sysid == 0 || target_sysid == -1)
         return true;
@@ -353,7 +356,7 @@ bool Endpoint::accept_msg(int target_sysid, int target_compid, uint8_t src_sysid
 
 bool Endpoint::allowed_by_filter(uint32_t msg_id)
 {
-     if (msg_id != UINT32_MAX &&
+    if (msg_id != UINT32_MAX &&
         _message_filter.size() > 0 &&
         std::find(_message_filter.begin(), _message_filter.end(), msg_id) == _message_filter.end()) {
 
@@ -362,6 +365,15 @@ bool Endpoint::allowed_by_filter(uint32_t msg_id)
     }
     return true;
 }
+
+bool Endpoint::allowed_by_dropout()
+{
+    if (_dropout_percentage > 0 && rand() < RAND_MAX/100 * (int)_dropout_percentage) {
+        return false;
+    }
+    return true;
+}
+
 
 void Endpoint::postprocess_msg(int target_sysid, int target_compid, uint8_t src_sysid,
                                uint8_t src_compid, uint32_t msg_id)
@@ -845,7 +857,7 @@ int UdpEndpoint::open(const char *ip, unsigned long port, bool to_bind)
 
         sockaddr6.sin6_family = AF_INET6;
         sockaddr6.sin6_port = htons(port);
-        
+
         /* multicast address needs to listen to all, but "filter" incoming packets */
         if (to_bind && Endpoint::ipv6_is_multicast(ip_str)) {
             sockaddr6.sin6_addr = in6addr_any;
