@@ -192,6 +192,7 @@ struct endpoint_config {
         };
     };
     char *filter;
+    uint32_t dropout_percentage;
 };
 
 struct options {

@@ -31,6 +31,7 @@ public:
         cfg.filter = nullptr;
         static char nodelay[] = "75,76,77";
         cfg.coalesce_nodelay = nodelay;
+        cfg.dropout_percentage = 0;
 
         return cfg;
     }
@@ -104,6 +105,25 @@ TEST_F(MainLoopTest, direct_udp_endpoint_send)
     EXPECT_EQ(0, std::memcmp("0123456789abcdef", recvbuf, 16));
 
     ::close(sock);
+}
+
+TEST_F(MainLoopTest, direct_udp_endpoint_dropout)
+{
+    struct endpoint_config cfg = make_udp_endpoint_config(7777, false);
+    cfg.dropout_percentage = 100;
+    struct options opts = make_single_endpoint_options(&cfg);
+
+    Mainloop mainloop;
+
+    // Set up and grab one udp endpoint
+    mainloop.add_endpoints(mainloop, &opts);
+    ASSERT_EQ(1, mainloop.endpoints().size());
+    UdpEndpoint* udp_endpoint = dynamic_cast<UdpEndpoint *>(mainloop.endpoints()[0].get());
+    ASSERT_NE(nullptr, udp_endpoint);
+
+    EXPECT_FALSE(udp_endpoint->allowed_by_dropout());
+    udp_endpoint->set_dropout_percentage(0);
+    EXPECT_TRUE(udp_endpoint->allowed_by_dropout());
 }
 
 
