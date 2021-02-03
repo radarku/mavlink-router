@@ -81,7 +81,7 @@ int Endpoint::handle_read()
 
     while ((r = read_msg(&buf, &target_sysid, &target_compid, &src_sysid,
                          &src_compid, &msg_id)) > 0) {
-        if (allowed_by_filter(msg_id) && allowed_by_dropout())
+        if (allowed_by_filter(msg_id) && allowed_by_dropout() && allowed_by_dedup(&buf))
             Mainloop::get_instance().route_msg(&buf, target_sysid, target_compid,
                                                src_sysid, src_compid, msg_id);
     }
@@ -374,6 +374,13 @@ bool Endpoint::allowed_by_dropout()
     return true;
 }
 
+bool Endpoint::allowed_by_dedup(const buffer* buf)
+{
+    if (Mainloop::get_instance().add_check_dedup(buf)) {
+        return false;
+    }
+    return true;
+}
 
 void Endpoint::postprocess_msg(int target_sysid, int target_compid, uint8_t src_sysid,
                                uint8_t src_compid, uint32_t msg_id)
