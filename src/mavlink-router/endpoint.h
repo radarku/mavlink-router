@@ -74,6 +74,7 @@ public:
     enum read_msg_result {
         ReadOk = 1,
         ReadUnkownMsg,
+        CrcError
     };
 
     Endpoint(const std::string& name);
