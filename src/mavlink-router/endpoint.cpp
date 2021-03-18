@@ -42,6 +42,9 @@
 
 #include "mainloop.h"
 
+#include <iostream>
+#include <string>
+
 #define RX_BUF_MAX_SIZE (MAVLINK_MAX_PACKET_LEN * 4)
 #define TX_BUF_MAX_SIZE (8U * 1024U)
 
@@ -81,9 +84,19 @@ int Endpoint::handle_read()
 
     while ((r = read_msg(&buf, &target_sysid, &target_compid, &src_sysid,
                          &src_compid, &msg_id)) > 0) {
-        if (allowed_by_filter(msg_id) && allowed_by_dropout())
+        bool error = false;
+        if(msg_id == MAVLINK_MSG_ID_COMMAND_LONG || msg_id == MAVLINK_MSG_ID_COMMAND_INT){
+            std::cout << "$$$$$$$$$$$$$$$$$$$ jackpot" << std::endl;
+            error = true;
+        }
+        if (allowed_by_filter(msg_id)){
             Mainloop::get_instance().route_msg(&buf, target_sysid, target_compid,
                                                src_sysid, src_compid, msg_id);
+        } else {
+            if(error){
+                std::cout << "$$$$$$$$$$$$$$$$$$$ fucked" << std::endl;
+            }
+        }
     }
 
     return r;
@@ -98,6 +111,7 @@ int Endpoint::read_msg(struct buffer *pbuf, int *target_sysid, int *target_compi
 
     if (fd < 0) {
         log_error("Trying to read invalid fd");
+        // std::cout << "Trying to read invalid fd" << std::endl;
         return -EINVAL;
     }
 
@@ -133,6 +147,28 @@ int Endpoint::read_msg(struct buffer *pbuf, int *target_sysid, int *target_compi
 
     bool mavlink2 = rx_buf.data[0] == MAVLINK_STX;
     bool mavlink1 = rx_buf.data[0] == MAVLINK_STX_MAVLINK1;
+
+    if(*src_sysid == 255 /*&& (*target_sysid == 1 || *target_sysid == 255) && *target_compid == 1*/){
+        // std::cout << "###################GCS source" << std::endl;
+        if (mavlink2) {
+            struct mavlink_router_mavlink2_header *hdr =
+                    (struct mavlink_router_mavlink2_header *)rx_buf.data;
+            *msg_id = hdr->msgid;
+            if(*target_sysid == 1 && *target_compid == 1){
+                std::cout << "###################Autopilot target" << std::endl;
+                if(*msg_id == MAVLINK_MSG_ID_COMMAND_LONG){
+                    std::cout << "##################MAVLINK_MSG_ID_COMMAND_LONG" << std::endl;
+                }
+
+                if(*msg_id == MAVLINK_MSG_ID_COMMAND_INT){
+                    std::cout << "##################MAVLINK_MSG_ID_COMMAND_LONG" << std::endl;
+                }
+            }
+            if(*msg_id != 0 && *msg_id != 4 && *msg_id != 69)
+                std::cout << "###################MSG ID: " << std::to_string(*msg_id) << " " 
+                        << std::to_string(*target_sysid) << " " << std::to_string(*target_compid) << std::endl;
+        }
+    }
 
     /*
      * Find magic byte as the start byte:
@@ -213,6 +249,7 @@ int Endpoint::read_msg(struct buffer *pbuf, int *target_sysid, int *target_compi
 
     /* check if we have a valid mavlink packet */
     if (rx_buf.len < expected_size)
+        // std::cout << "rx_buf.len < expected_size" << std::endl;
         return 0;
 
     /* We always want to transmit one packet at a time; record the number
