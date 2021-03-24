@@ -34,6 +34,10 @@
 
 #include "autolog.h"
 
+#include <iostream>
+#include <string>
+#include <chrono>
+
 #define TIMEOUT_LOG_SHUTDOWN_US     5000000ULL // number of microseconds we wait until we give up trying to stop log streaming
                                         // after a shutdown of mavlink router was requested
 
@@ -76,6 +80,7 @@ void Mainloop::_init_pipe()
     if (_pipefd == -1) {
         throw std::runtime_error(std::string("open pipe: ") + strerror(errno));
     }
+    std::cout << " ### Init Pipe!!!" << std::endl;
     add_fd(_pipefd, &_pipefd, EPOLLIN);
 }
 
@@ -280,9 +285,19 @@ void Mainloop::loop()
 
     add_timeout(LOG_AGGREGATE_INTERVAL_SEC * MSEC_PER_SEC,
                 std::bind(&Mainloop::_log_aggregate_timeout, this, std::placeholders::_1), this);
-
+    
+    auto last_stats = std::chrono::steady_clock::now();
     while (!_should_exit.load(std::memory_order_relaxed)) {
+        auto start = std::chrono::steady_clock::now();
         run_single(-1);
+        auto now = std::chrono::steady_clock::now();
+        if (std::chrono::duration_cast<std::chrono::milliseconds>(now - start).count() > 1000) {
+            std::cout << " ### run_single(-1) took longer than 1 second" << std::endl;
+        }
+        if (std::chrono::duration_cast<std::chrono::milliseconds>(now - last_stats).count() > 10000) {
+            print_statistics();
+            last_stats = now;
+        }
     }
 
     // This is a bit weird, but models previous behavior: run event handling a
@@ -395,12 +410,15 @@ bool Mainloop::_log_aggregate_timeout(void *data)
 
 void Mainloop::print_statistics()
 {
+    std::cout << " ### Print static endpoints: " << std::endl;
     for (const auto & e : _endpoints) {
         e->print_statistics();
     }
+    std::cout << " ### Print dynamic endpoints: " << std::endl;
     for (auto i: _dynamic_endpoints) {
         i.second->print_statistics();
     }
+    std::cout << " ### Print tcp endpoints: " << std::endl;
     for (auto *t = g_tcp_endpoints; t; t = t->next)
         t->endpoint->print_statistics();
 }
@@ -455,6 +473,7 @@ bool Mainloop::add_dynamic_endpoint(const dynamic_command& command)
     if (pipecmd != _pipe_commands.end() && pipecmd->second == command.command) {
         auto ep = _dynamic_endpoints.find(command.name);
         if (ep != _dynamic_endpoints.end()) {
+            std::cout << " ### Refresing dynamic endpoint: " << command.name << std::endl;
             ep->second->reset_expire_timer();
             return true;
         }
@@ -890,14 +909,17 @@ void Mainloop::_handle_pipe()
             current_new_line = strchr(buffer, '\n');
 
             // Parse each command
+            std::cout << " ###################################" << std::endl;
 
             dynamic_command dcmd;
             int err_code = parse(command, dcmd);
             if (err_code != 0) {
-                log_warning("Could not read command '%s', error %d", command, err_code);
+                // log_warning("Could not read command '%s', error %d", command, err_code);
+                std::cout << " ### Could not read command from pipe. Error: " << std::to_string(err_code) << std::endl;
                 continue;
             }
 
+            std::cout << " ### Pipe command: " << dcmd.command << " name: " << dcmd.name << " address: " << dcmd.address << " port: " << dcmd.port << std::endl;
             switch(dcmd.command) {
                 case dynamic_command::remove:
                 {
