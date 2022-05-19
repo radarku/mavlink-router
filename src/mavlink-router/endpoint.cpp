@@ -881,7 +881,11 @@ int UdpEndpoint::open(const char *ip, unsigned long port, bool to_bind)
     } else {
 #endif
     sockaddr.sin_family = AF_INET;
-    sockaddr.sin_addr.s_addr = inet_addr(ip);
+    struct hostent *server;
+    server = gethostbyname(ip);
+    bcopy((char *)server->h_addr, 
+         (char *)&sockaddr.sin_addr.s_addr,
+         server->h_length);
     sockaddr.sin_port = htons(port);
 #ifdef ENABLE_IPV6
     }
@@ -1147,7 +1151,11 @@ int TcpEndpoint::open(const char *ip, unsigned long port)
     } else {
 #endif
     sockaddr.sin_family = AF_INET;
-    sockaddr.sin_addr.s_addr = inet_addr(ip);
+    struct hostent *server;
+    server = gethostbyname(ip);
+    bcopy((char *)server->h_addr, 
+         (char *)&sockaddr.sin_addr.s_addr,
+         server->h_length);
     sockaddr.sin_port = htons(port);
 #ifdef ENABLE_IPV6
     }

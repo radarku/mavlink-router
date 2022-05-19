@@ -797,14 +797,9 @@ static int parse_confs(ConfFile &conf)
                 log_error("Expected 'port' key for section %.*s", (int)iter.name_len, iter.name);
                 ret = -EINVAL;
             } else {
-                if (validate_ip(opt_udp.addr) < 0) {
-                    log_error("Invalid IP address in section %.*s: %s", (int)iter.name_len, iter.name, opt_udp.addr);
-                    ret = -EINVAL;
-                } else {
                     ret = add_udp_endpoint_address(iter.name + offset, iter.name_len - offset, opt_udp.addr,
                                                    opt_udp.port, opt_udp.eavesdropping, opt_udp.filter, opt_udp.coalesce_bytes,
                                                    opt_udp.coalesce_ms, opt_udp.coalesce_nodelay, opt_udp.dropout_percentage);
-                }
             }
         }
 
@@ -823,13 +818,8 @@ static int parse_confs(ConfFile &conf)
         ret = conf.extract_options(&iter, option_table_tcp, ARRAY_SIZE(option_table_tcp), &opt_tcp);
 
         if (ret == 0) {
-            if (validate_ip(opt_tcp.addr) < 0) {
-                log_error("Invalid IP address in section %.*s: %s", (int)iter.name_len, iter.name, opt_tcp.addr);
-                ret = -EINVAL;
-            } else {
                 ret = add_tcp_endpoint_address(iter.name + offset, iter.name_len - offset, opt_tcp.addr,
                                                opt_tcp.port, opt_tcp.timeout);
-            }
         }
         free(opt_tcp.addr);
         if (ret < 0)
