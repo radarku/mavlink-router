@@ -880,13 +880,25 @@ int UdpEndpoint::open(const char *ip, unsigned long port, bool to_bind)
         free(ip_str);
     } else {
 #endif
-    sockaddr.sin_family = AF_INET;
-    struct hostent *server;
-    server = gethostbyname(ip);
-    bcopy((char *)server->h_addr, 
-         (char *)&sockaddr.sin_addr.s_addr,
-         server->h_length);
-    sockaddr.sin_port = htons(port);
+
+    struct addrinfo hints = {0}, *addrs;
+    hints.ai_family = AF_UNSPEC;
+    hints.ai_socktype = SOCK_STREAM;
+    hints.ai_protocol = IPPROTO_TCP;
+
+    const int status = getaddrinfo(ip, std::to_string(port).c_str(), &hints, &addrs);
+    if (status != 0)
+    {
+        // fprintf(stderr, "%s: %s\n", hostname, gai_strerror(status));
+        exit(1);
+    }
+
+    for(struct addrinfo *addr = addrs; addr != NULL; addr = addr->ai_next)
+    {
+        fd = socket(addr->ai_family, addr->ai_socktype, addr->ai_protocol);
+        break;
+    }
+
 #ifdef ENABLE_IPV6
     }
 #endif
@@ -1115,7 +1127,6 @@ int TcpEndpoint::open(const char *ip, unsigned long port)
         fd = socket(AF_INET6, SOCK_STREAM, 0);
     } else {
 #endif
-    fd = socket(AF_INET, SOCK_STREAM, 0);
 
 #ifdef ENABLE_IPV6
     }
@@ -1150,32 +1161,45 @@ int TcpEndpoint::open(const char *ip, unsigned long port)
         free(ip_str);
     } else {
 #endif
-    sockaddr.sin_family = AF_INET;
-    struct hostent *server;
-    server = gethostbyname(ip);
-    bcopy((char *)server->h_addr, 
-         (char *)&sockaddr.sin_addr.s_addr,
-         server->h_length);
-    sockaddr.sin_port = htons(port);
+    struct addrinfo hints = {0}, *addrs;
+    hints.ai_family = AF_UNSPEC;
+    hints.ai_socktype = SOCK_STREAM;
+    hints.ai_protocol = IPPROTO_TCP;
+
+    const int status = getaddrinfo(ip, std::to_string(port).c_str(), &hints, &addrs);
+    if (status != 0)
+    {
+        // fprintf(stderr, "%s: %s\n", hostname, gai_strerror(status));
+        exit(1);
+    }
+
+    for(struct addrinfo *addr = addrs; addr != NULL; addr = addr->ai_next)
+    {
+        fd = socket(addr->ai_family, addr->ai_socktype, addr->ai_protocol);
+        if (connect(fd, addr->ai_addr, addr->ai_addrlen) == 0) {
+            break;
+        }
+    }
+
 #ifdef ENABLE_IPV6
     }
 #endif
 
-#ifdef ENABLE_IPV6
-    if (this->is_ipv6) {
-        if (connect(fd, (struct sockaddr *)&sockaddr6, sizeof(sockaddr6)) < 0) {
-            log_error("Error connecting to IPv6 socket (%m)");
-            goto fail;
-        }
-    } else {
-#endif
-    if (connect(fd, (struct sockaddr *)&sockaddr, sizeof(sockaddr)) < 0) {
-        log_error("Error connecting to socket (%m)");
-        goto fail;
-    }
-#ifdef ENABLE_IPV6
-    }
-#endif
+// #ifdef ENABLE_IPV6
+//     if (this->is_ipv6) {
+//         if (connect(fd, (struct sockaddr *)&sockaddr6, sizeof(sockaddr6)) < 0) {
+//             log_error("Error connecting to IPv6 socket (%m)");
+//             goto fail;
+//         }
+//     } else {
+// #endif
+//     if (connect(fd, addrs[0]->ai_addr, addrs[0]->ai_addrlen) < 0) {
+//         log_error("Error connecting to socket (%m)");
+//         goto fail;
+//     }
+// #ifdef ENABLE_IPV6
+//     }
+// #endif
 
     if (fcntl(fd, F_SETFL, O_NONBLOCK | FASYNC) < 0) {
         log_error("Error setting socket fd as non-blocking (%m)");
